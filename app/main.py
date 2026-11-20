@@ -54,6 +54,21 @@ def create_app():
         for row in result["quarantine"]:
             writer.writerow([result["manifest"]["run_id"],row["line"],row["key"],row["code"],json.dumps(row,ensure_ascii=False)])
         return Response("\ufeff"+stream.getvalue(),content_type="text/csv; charset=utf-8",headers={"Content-Disposition":"attachment; filename=evidence.csv"})
+    @app.get("/api/handover.csv")
+    def handover():
+        result=store.fetch(request.args["run"]) if request.args.get("run") else run()
+        stream=io.StringIO(newline="");writer=csv.writer(stream)
+        writer.writerow(["批次","水库","日期","覆盖h","入库m3","出库m3","库容变化m3","收支差m3","状态",
+                         "水位来源时长","流量来源时长","风壅偏差m","段起点","段终点","水位来源","流量来源","段依据"])
+        for day in result.get("budgets",[]):
+            level_sources="；".join("%s %sh"%(k,v) for k,v in day["level_sources"].items())
+            flow_sources="；".join("%s %sh"%(k,v) for k,v in day["flow_sources"].items())
+            for seg in day.get("segments",[]):
+                writer.writerow([result["manifest"]["run_id"],day["reservoir"],day["date"],day["coverage_hours"],
+                                 day["in_m3"],day["out_m3"],day["storage_change"],day["residual"],day["state"],
+                                 level_sources,flow_sources,day.get("wind_bias_m") or "",
+                                 seg["start"],seg["end"],seg["level_source"],seg["flow_source"],seg.get("detail","")])
+        return Response("\ufeff"+stream.getvalue(),content_type="text/csv; charset=utf-8",headers={"Content-Disposition":"attachment; filename=handover.csv"})
     for n,name in enumerate(STAGES,1): app.register_blueprint(import_module(f"app.modules.m{n}_{name}.handler").bp)
     return app
 app=create_app()

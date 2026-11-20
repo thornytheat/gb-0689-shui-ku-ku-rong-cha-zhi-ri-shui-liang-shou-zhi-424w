@@ -4,4 +4,4 @@ def interpolate(level,curve):
     for (ha,va),(hb,vb) in zip(curve,curve[1:]):
         if ha<=level<=hb:return va+(vb-va)*(level-ha)/(hb-ha)
     raise DomainError('CURVE','曲线没有覆盖水位')
-def storage(rows,curve):return [{**row,'volume':interpolate(row['level'],curve)} for row in rows]
+def storage(rows,curve):return [{**row,'volume':interpolate(row['level'],curve)} for row in rows if row.get('level') is not None]
